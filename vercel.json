@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "echo skipping build (functions are JIT-compiled)",
+  "buildCommand": "true",
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index" }
   ]
