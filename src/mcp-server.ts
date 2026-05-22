@@ -55,68 +55,6 @@ export class SportMCPServer {
         case 'notifications/initialized':
           return { jsonrpc: '2.0', id: request.id, result: {} };
         
-        case 'get-activity-laps':
-          if (!args?.id) throw new Error('Activity ID is required');
-          result = await StravaApiProxy.fetchJson(`/activities/${args.id}/laps`, context.token);
-          break;
-
-        case 'get-activity-kudos':
-          if (!args?.id) throw new Error('Activity ID is required');
-          result = await StravaApiProxy.fetchJson(`/activities/${args.id}/kudos`, context.token, {
-            params: { per_page: Math.min(args?.per_page || 30, 200) }
-          });
-          break;
-
-        case 'get-activity-comments':
-          if (!args?.id) throw new Error('Activity ID is required');
-          result = await StravaApiProxy.fetchJson(`/activities/${args.id}/comments`, context.token, {
-            params: { per_page: Math.min(args?.per_page || 30, 200) }
-          });
-          break;
-
-        case 'get-athlete-zones':
-          result = await StravaApiProxy.fetchJson('/athlete/zones', context.token);
-          break;
-
-        case 'get-athlete-clubs':
-          result = await StravaApiProxy.fetchJson('/athlete/clubs', context.token);
-          break;
-
-        case 'get-club':
-          if (!args?.id) throw new Error('Club ID is required');
-          result = await StravaApiProxy.fetchJson(`/clubs/${args.id}`, context.token);
-          break;
-
-        case 'get-gear':
-          if (!args?.id) throw new Error('Gear ID is required');
-          result = await StravaApiProxy.fetchJson(`/gear/${args.id}`, context.token);
-          break;
-
-        case 'get-segment':
-          if (!args?.id) throw new Error('Segment ID is required');
-          result = await StravaApiProxy.fetchJson(`/segments/${args.id}`, context.token);
-          break;
-
-        case 'get-segment-efforts':
-          if (!args?.segment_id) throw new Error('Segment ID is required');
-          result = await StravaApiProxy.fetchJson(`/segments/${args.segment_id}/all_efforts`, context.token, {
-            params: {
-              athlete_id: context.session.athlete_id,  // scope to authenticated user's efforts only
-              per_page: Math.min(args?.per_page || 30, 200)
-            }
-          });
-          break;
-
-        case 'get-segment-effort':
-          if (!args?.id) throw new Error('Segment effort ID is required');
-          result = await StravaApiProxy.fetchJson(`/segment_efforts/${args.id}`, context.token);
-          break;
-
-        case 'get-route':
-          if (!args?.id) throw new Error('Route ID is required');
-          result = await StravaApiProxy.fetchJson(`/routes/${args.id}`, context.token);
-          break;
-
                 default:
           return {
             jsonrpc: '2.0',
