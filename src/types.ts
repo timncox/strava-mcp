@@ -1,11 +1,16 @@
-// Environment variables
+import type { KVAdapter } from './kv';
+
+// Environment variables (Vercel + Upstash). The KVAdapter shape matches the
+// subset of Cloudflare KVNamespace upstream code uses.
 export interface Env {
-  STRAVA_SESSIONS: KVNamespace;
+  STRAVA_SESSIONS: KVAdapter;
   STRAVA_CLIENT_ID: string;
-  STRAVA_CLIENT_SECRET: string; 
+  STRAVA_CLIENT_SECRET: string;
   STRAVA_REDIRECT_URI: string;
   STRAVA_WEBHOOK_VERIFY_TOKEN?: string;
   POKE_API_KEY?: string;
+  UPSTASH_REDIS_REST_URL: string;
+  UPSTASH_REDIS_REST_TOKEN: string;
 }
 
 // Strava OAuth session stored in KV

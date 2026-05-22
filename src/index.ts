@@ -11,6 +11,7 @@ import { NOTHING_LANDING_TEMPLATE, NOTHING_DASHBOARD_TEMPLATE, NOTHING_ABOUT_TEM
 import { STRAVA_LOGO_WHITE_SVG, STRAVA_POWERED_BADGE_SVG } from './strava-brand';
 import { StravaWebhookHandler } from './webhook';
 import { sendNotification, sendNotificationToAll, NotificationConfig, NotificationProvider, PROVIDER_INFO, maskKey } from './notifications';
+import { kvInjectionMiddleware } from './kv';
 
 /** Map of agent slug → { regex to match User-Agent, display name } */
 const AGENT_DEFS: { slug: string; re: RegExp; name: string }[] = [
@@ -46,6 +47,10 @@ function formatTimeAgo(ts: number): string {
 }
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Inject the Upstash-backed KVAdapter as c.env.STRAVA_SESSIONS so upstream
+// call sites work unchanged on Vercel. Must run before any route that reads it.
+app.use('*', kvInjectionMiddleware());
 
 // Initialize template engine
 const templates = new TemplateEngine();
