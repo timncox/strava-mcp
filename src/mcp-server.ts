@@ -341,6 +341,65 @@ export class SportMCPServer {
           },
           required: ['id']
         }
+      },
+      {
+        name: 'bulk-update-activities',
+        description: 'Apply the same edit to many activities at once. Filter activities by date range, sport type, or name pattern; patch can set name (literal or templated), description, commute flag, trainer flag, hide_from_home, gear_id, or sport_type. Always preview with dry_run=true first (the default).',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            filter: {
+              type: 'object',
+              description: 'Activities matching ALL specified filter fields will be updated.',
+              properties: {
+                before: { type: 'number', description: 'Unix seconds: only activities started before this time' },
+                after: { type: 'number', description: 'Unix seconds: only activities started after this time' },
+                sport_type: { type: 'string', description: 'Exact Strava sport_type (e.g. Run, Ride, TrailRun, GravelRide)' },
+                name_contains: { type: 'string', description: 'Case-insensitive substring match on activity name' },
+                name_regex: { type: 'string', description: 'JS regex on activity name (alternative to name_contains)' }
+              }
+            },
+            patch: {
+              type: 'object',
+              description: 'Fields to set on matching activities. Provide one or more.',
+              properties: {
+                name: { type: 'string', description: 'Literal new name' },
+                name_template: { type: 'string', description: 'Template with placeholders {sport_type} {date} {distance_km} — e.g. "Recovery {sport_type} {date}"' },
+                description: { type: 'string' },
+                commute: { type: 'boolean' },
+                trainer: { type: 'boolean' },
+                hide_from_home: { type: 'boolean' },
+                gear_id: { type: 'string', description: 'Bike or shoe id from get-athlete-profile; pass "none" to clear' },
+                sport_type: { type: 'string' }
+              }
+            },
+            dry_run: { type: 'boolean', default: true, description: 'If true (default), return what WOULD be changed without writing. Set false to actually update.' },
+            max_activities: { type: 'number', default: 50, description: 'Safety cap on how many activities can be touched in one call (max 200).' }
+          },
+          required: ['filter', 'patch']
+        }
+      },
+      {
+        name: 'weekly-summary',
+        description: 'Rolling per-week aggregates: count, total distance, moving time, elevation, average heart rate. Grouped by sport_type within each ISO week (Monday start). Cheaper than calling get-recent-activities + summing yourself.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            weeks_back: { type: 'number', default: 4, description: 'How many weeks of history to summarize (max 26).' },
+            sport_types: { type: 'array', items: { type: 'string' }, description: 'Optional sport-type filter, e.g. ["Run","Ride"]. Default: include all sport types found.' }
+          }
+        }
+      },
+      {
+        name: 'streak-status',
+        description: 'Current consecutive-day activity streak and longest streak in the lookback window. Pass sport_type to scope (e.g. only running days count); omit for any-activity streaks.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            sport_type: { type: 'string', description: 'Optional. e.g. Run, Ride. Omit to count any activity.' },
+            lookback_days: { type: 'number', default: 365, description: 'How far back to search for the longest streak (max 730).' }
+          }
+        }
       }
     ];
 
@@ -491,7 +550,203 @@ export class SportMCPServer {
             params: routeParams
           });
           break;
-        
+
+        case 'bulk-update-activities': {
+          const filter = (args?.filter ?? {}) as any;
+          const patch = (args?.patch ?? {}) as any;
+          const dryRun = args?.dry_run !== false;
+          const maxActivities = Math.min(args?.max_activities ?? 50, 200);
+
+          const fetchParams: any = { per_page: Math.min(maxActivities * 2, 200) };
+          if (filter.before) fetchParams.before = filter.before;
+          if (filter.after) fetchParams.after = filter.after;
+
+          const acts: any[] = await StravaApiProxy.fetchJson('/athlete/activities', context.token, { params: fetchParams });
+
+          let nameRegex: RegExp | null = null;
+          if (filter.name_regex) {
+            try { nameRegex = new RegExp(filter.name_regex); }
+            catch (e: any) {
+              result = { error: `Invalid name_regex: ${e?.message}` };
+              break;
+            }
+          }
+
+          const matched = (Array.isArray(acts) ? acts : []).filter((a: any) => {
+            if (filter.sport_type && a.sport_type !== filter.sport_type) return false;
+            if (filter.name_contains && !(a.name ?? '').toLowerCase().includes(String(filter.name_contains).toLowerCase())) return false;
+            if (nameRegex && !nameRegex.test(a.name ?? '')) return false;
+            return true;
+          }).slice(0, maxActivities);
+
+          const renderTemplate = (tpl: string, a: any) => tpl
+            .replace(/\{sport_type\}/g, a.sport_type ?? '')
+            .replace(/\{date\}/g, (a.start_date_local ?? '').slice(0, 10))
+            .replace(/\{distance_km\}/g, ((a.distance ?? 0) / 1000).toFixed(1));
+
+          const updates: any[] = [];
+          for (const a of matched) {
+            const body: any = {};
+            if (patch.name !== undefined) body.name = patch.name;
+            if (patch.name_template !== undefined) body.name = renderTemplate(patch.name_template, a);
+            if (patch.description !== undefined) body.description = patch.description;
+            if (patch.commute !== undefined) body.commute = patch.commute;
+            if (patch.trainer !== undefined) body.trainer = patch.trainer;
+            if (patch.hide_from_home !== undefined) body.hide_from_home = patch.hide_from_home;
+            if (patch.gear_id !== undefined) body.gear_id = patch.gear_id;
+            if (patch.sport_type !== undefined) body.sport_type = patch.sport_type;
+
+            if (Object.keys(body).length === 0) {
+              updates.push({ id: a.id, name: a.name, skipped: 'empty patch' });
+              continue;
+            }
+
+            if (dryRun) {
+              updates.push({ id: a.id, name: a.name, would_set: body });
+            } else {
+              try {
+                await StravaApiProxy.fetchJson(`/activities/${a.id}`, context.token, { method: 'PUT', body });
+                updates.push({ id: a.id, name: a.name, applied: body });
+              } catch (e: any) {
+                updates.push({ id: a.id, name: a.name, error: e?.message ?? String(e) });
+              }
+            }
+          }
+          result = {
+            matched_count: matched.length,
+            total_scanned: Array.isArray(acts) ? acts.length : 0,
+            dry_run: dryRun,
+            updates
+          };
+          break;
+        }
+
+        case 'weekly-summary': {
+          const weeksBack = Math.min(args?.weeks_back ?? 4, 26);
+          const sportTypes: string[] | null = Array.isArray(args?.sport_types) && args.sport_types.length > 0 ? args.sport_types : null;
+          const afterSec = Math.floor(Date.now() / 1000) - weeksBack * 7 * 86400;
+
+          const acts: any[] = [];
+          let page = 1;
+          while (page <= 5) {
+            const batch = await StravaApiProxy.fetchJson('/athlete/activities', context.token, {
+              params: { after: afterSec, per_page: 200, page }
+            });
+            if (!Array.isArray(batch) || batch.length === 0) break;
+            acts.push(...batch);
+            if (batch.length < 200) break;
+            page++;
+          }
+
+          const buckets: Record<string, Record<string, any>> = {};
+          for (const a of acts) {
+            if (sportTypes && !sportTypes.includes(a.sport_type)) continue;
+            const d = new Date(a.start_date);
+            const day = d.getUTCDay();
+            const diff = (day === 0 ? -6 : 1 - day);
+            const monday = new Date(d);
+            monday.setUTCDate(d.getUTCDate() + diff);
+            const wk = monday.toISOString().slice(0, 10);
+            const st = a.sport_type ?? 'Unknown';
+            buckets[wk] ??= {};
+            buckets[wk][st] ??= { count: 0, distance_m: 0, moving_time_s: 0, elevation_m: 0, heartrate_sum: 0, heartrate_count: 0 };
+            const b = buckets[wk][st];
+            b.count++;
+            b.distance_m += a.distance ?? 0;
+            b.moving_time_s += a.moving_time ?? 0;
+            b.elevation_m += a.total_elevation_gain ?? 0;
+            if (a.has_heartrate && a.average_heartrate) {
+              b.heartrate_sum += a.average_heartrate;
+              b.heartrate_count++;
+            }
+          }
+          const weeks = Object.entries(buckets)
+            .sort(([a], [b]) => b.localeCompare(a))
+            .map(([wk, sports]) => ({
+              week_starting: wk,
+              sports: Object.fromEntries(Object.entries(sports).map(([st, b]: [string, any]) => [st, {
+                count: b.count,
+                distance_km: Math.round(b.distance_m / 100) / 10,
+                moving_time_min: Math.round(b.moving_time_s / 60),
+                elevation_m: Math.round(b.elevation_m),
+                avg_heartrate: b.heartrate_count > 0 ? Math.round(b.heartrate_sum / b.heartrate_count) : null
+              }]))
+            }));
+          result = { weeks_requested: weeksBack, activities_scanned: acts.length, weeks };
+          break;
+        }
+
+        case 'streak-status': {
+          const sportType = args?.sport_type;
+          const lookbackDays = Math.min(args?.lookback_days ?? 365, 730);
+          const afterSec = Math.floor(Date.now() / 1000) - lookbackDays * 86400;
+
+          const acts: any[] = [];
+          let page = 1;
+          while (page <= 10) {
+            const batch = await StravaApiProxy.fetchJson('/athlete/activities', context.token, {
+              params: { after: afterSec, per_page: 200, page }
+            });
+            if (!Array.isArray(batch) || batch.length === 0) break;
+            acts.push(...batch);
+            if (batch.length < 200) break;
+            page++;
+          }
+
+          const days = new Set<string>();
+          for (const a of acts) {
+            if (sportType && a.sport_type !== sportType) continue;
+            const day = (a.start_date_local ?? a.start_date ?? '').slice(0, 10);
+            if (day) days.add(day);
+          }
+          const sorted = [...days].sort();
+
+          let longest = 0, longestStart = '', longestEnd = '';
+          let runStart = '', runEnd = '', runLen = 0;
+          for (const day of sorted) {
+            if (!runStart) {
+              runStart = day; runEnd = day; runLen = 1;
+            } else {
+              const prev = new Date(runEnd + 'T00:00:00Z');
+              prev.setUTCDate(prev.getUTCDate() + 1);
+              const expected = prev.toISOString().slice(0, 10);
+              if (day === expected) {
+                runEnd = day; runLen++;
+              } else {
+                if (runLen > longest) { longest = runLen; longestStart = runStart; longestEnd = runEnd; }
+                runStart = day; runEnd = day; runLen = 1;
+              }
+            }
+          }
+          if (runLen > longest) { longest = runLen; longestStart = runStart; longestEnd = runEnd; }
+
+          const today = new Date().toISOString().slice(0, 10);
+          let current = 0;
+          const cur = new Date(today + 'T00:00:00Z');
+          while (true) {
+            const k = cur.toISOString().slice(0, 10);
+            if (days.has(k)) {
+              current++;
+              cur.setUTCDate(cur.getUTCDate() - 1);
+            } else {
+              break;
+            }
+          }
+
+          result = {
+            sport_type: sportType ?? 'any',
+            lookback_days: lookbackDays,
+            activities_scanned: acts.length,
+            matching_days: sorted.length,
+            current_streak_days: current,
+            longest_streak_days: longest,
+            longest_streak_start: longestStart || null,
+            longest_streak_end: longestEnd || null,
+            last_activity_date: sorted[sorted.length - 1] ?? null
+          };
+          break;
+        }
+
         default:
           return {
             jsonrpc: '2.0',
