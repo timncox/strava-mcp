@@ -1,7 +1,7 @@
 // Nothing design variant stubs — re-export the main templates for the open-source version.
 // The hosted product uses a custom design system; this OSS version uses the same minimal UI.
 
-import { LANDING_TEMPLATE, DASHBOARD_TEMPLATE } from './templates';
+import { LANDING_TEMPLATE, DASHBOARD_TEMPLATE } from './templates.js';
 
 export const NOTHING_LANDING_TEMPLATE = LANDING_TEMPLATE;
 export const NOTHING_DASHBOARD_TEMPLATE = DASHBOARD_TEMPLATE;

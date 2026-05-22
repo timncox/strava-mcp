@@ -1,8 +1,8 @@
 import { Context } from 'hono';
 import { streamSSE } from 'hono/streaming';
-import { Env } from './types';
-import { AuthMiddleware } from './middleware';
-import { StravaApiProxy } from './middleware';
+import { Env } from './types.js';
+import { AuthMiddleware } from './middleware.js';
+import { StravaApiProxy } from './middleware.js';
 
 // MCP Protocol types
 interface MCPRequest {

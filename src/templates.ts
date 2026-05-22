@@ -1,4 +1,4 @@
-import { STRAVA_POWERED_BADGE_SVG } from './strava-brand';
+import { STRAVA_POWERED_BADGE_SVG } from './strava-brand.js';
 
 // Simple template engine for HTML rendering
 export class TemplateEngine {

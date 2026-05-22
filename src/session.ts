@@ -1,4 +1,4 @@
-import { Env, StravaSession, StravaTokenResponse, SessionManager } from './types';
+import { Env, StravaSession, StravaTokenResponse, SessionManager } from './types.js';
 
 export class KVSessionManager implements SessionManager {
   constructor(private env: Env) {}

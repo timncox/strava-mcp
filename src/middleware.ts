@@ -1,6 +1,6 @@
 import { Context, Next } from 'hono';
-import { Env, AuthenticatedContext } from './types';
-import { KVSessionManager, getCookieValue } from './session';
+import { Env, AuthenticatedContext } from './types.js';
+import { KVSessionManager, getCookieValue } from './session.js';
 
 export class AuthMiddleware {
   private sessionManager: KVSessionManager;

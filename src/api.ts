@@ -1,5 +1,5 @@
 import { Context } from 'hono';
-import { StravaApiProxy } from './middleware';
+import { StravaApiProxy } from './middleware.js';
 
 // API handlers that mirror the original MCP tools
 export class StravaApiHandlers {

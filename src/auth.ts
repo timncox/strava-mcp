@@ -1,6 +1,6 @@
 import { Context } from 'hono';
-import { Env, StravaTokenResponse, StravaSession } from './types';
-import { KVSessionManager, getCookieValue, createCookie, deleteCookie, generateState } from './session';
+import { Env, StravaTokenResponse, StravaSession } from './types.js';
+import { KVSessionManager, getCookieValue, createCookie, deleteCookie, generateState } from './session.js';
 
 const REQUIRED_SCOPES = 'profile:read_all,activity:read_all,activity:read';
 

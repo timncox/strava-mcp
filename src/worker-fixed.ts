@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import { Env } from './types';
-import { AuthHandler } from './auth';
-import { AuthMiddleware } from './middleware';
-import { StravaApiHandlers } from './api';
+import { Env } from './types.js';
+import { AuthHandler } from './auth.js';
+import { AuthMiddleware } from './middleware.js';
+import { StravaApiHandlers } from './api.js';
 
 const app = new Hono<{ Bindings: Env }>();
 

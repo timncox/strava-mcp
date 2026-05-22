@@ -1,4 +1,4 @@
-import type { KVAdapter } from './kv';
+import type { KVAdapter } from './kv.js';
 
 // Environment variables (Vercel + Upstash). The KVAdapter shape matches the
 // subset of Cloudflare KVNamespace upstream code uses.

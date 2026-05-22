@@ -1,7 +1,7 @@
 import { Context } from 'hono';
-import { Env, StravaWebhookEvent, StravaActivity } from './types';
-import { KVSessionManager } from './session';
-import { sendNotification, sendNotificationToAll, NotificationConfig } from './notifications';
+import { Env, StravaWebhookEvent, StravaActivity } from './types.js';
+import { KVSessionManager } from './session.js';
+import { sendNotification, sendNotificationToAll, NotificationConfig } from './notifications.js';
 
 /**
  * Strava Webhook Handler

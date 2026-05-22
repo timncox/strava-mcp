@@ -1,17 +1,17 @@
 import { Hono } from 'hono';
-import { Env } from './types';
-import { AuthHandler } from './auth';
-import { AuthMiddleware } from './middleware';
-import { getCookieValue, createCookie, generateState } from './session';
-import { StravaApiHandlers } from './api';
-import { SportMCPServer, handleMCPOverSSE } from './mcp-server';
-import { TemplateEngine, LANDING_TEMPLATE, DASHBOARD_TEMPLATE } from './templates';
-import { ABOUT_TEMPLATE, SUPPORT_TEMPLATE, PRIVACY_TEMPLATE, TERMS_TEMPLATE } from './legal-templates';
-import { NOTHING_LANDING_TEMPLATE, NOTHING_DASHBOARD_TEMPLATE, NOTHING_ABOUT_TEMPLATE, NOTHING_SUPPORT_TEMPLATE, NOTHING_PRIVACY_TEMPLATE, NOTHING_TERMS_TEMPLATE } from './nothing-templates';
-import { STRAVA_LOGO_WHITE_SVG, STRAVA_POWERED_BADGE_SVG } from './strava-brand';
-import { StravaWebhookHandler } from './webhook';
-import { sendNotification, sendNotificationToAll, NotificationConfig, NotificationProvider, PROVIDER_INFO, maskKey } from './notifications';
-import { kvInjectionMiddleware } from './kv';
+import { Env } from './types.js';
+import { AuthHandler } from './auth.js';
+import { AuthMiddleware } from './middleware.js';
+import { getCookieValue, createCookie, generateState } from './session.js';
+import { StravaApiHandlers } from './api.js';
+import { SportMCPServer, handleMCPOverSSE } from './mcp-server.js';
+import { TemplateEngine, LANDING_TEMPLATE, DASHBOARD_TEMPLATE } from './templates.js';
+import { ABOUT_TEMPLATE, SUPPORT_TEMPLATE, PRIVACY_TEMPLATE, TERMS_TEMPLATE } from './legal-templates.js';
+import { NOTHING_LANDING_TEMPLATE, NOTHING_DASHBOARD_TEMPLATE, NOTHING_ABOUT_TEMPLATE, NOTHING_SUPPORT_TEMPLATE, NOTHING_PRIVACY_TEMPLATE, NOTHING_TERMS_TEMPLATE } from './nothing-templates.js';
+import { STRAVA_LOGO_WHITE_SVG, STRAVA_POWERED_BADGE_SVG } from './strava-brand.js';
+import { StravaWebhookHandler } from './webhook.js';
+import { sendNotification, sendNotificationToAll, NotificationConfig, NotificationProvider, PROVIDER_INFO, maskKey } from './notifications.js';
+import { kvInjectionMiddleware } from './kv.js';
 
 /** Map of agent slug → { regex to match User-Agent, display name } */
 const AGENT_DEFS: { slug: string; re: RegExp; name: string }[] = [
