@@ -65,23 +65,38 @@ export function makeUpstashKVAdapter(url: string, token: string): KVAdapter {
  * c.env.STRAVA_SESSIONS so all upstream call sites work unchanged on Vercel.
  * The cached client is reused across requests within the same warm instance.
  */
+const STRAVA_ENV_KEYS = [
+  'STRAVA_CLIENT_ID',
+  'STRAVA_CLIENT_SECRET',
+  'STRAVA_REDIRECT_URI',
+  'STRAVA_WEBHOOK_VERIFY_TOKEN',
+  'STRAVA_WEBHOOK_CALLBACK_URL',
+  'POKE_API_KEY',
+  'KV_REST_API_URL',
+  'KV_REST_API_TOKEN',
+  'UPSTASH_REDIS_REST_URL',
+  'UPSTASH_REDIS_REST_TOKEN',
+] as const;
+
+/**
+ * Hono middleware: populate c.env from process.env (Vercel doesn't bind it
+ * like Cloudflare does) and attach the Upstash-backed KV adapter as
+ * c.env.STRAVA_SESSIONS. Cached client is reused across requests within the
+ * same warm instance.
+ */
 export function kvInjectionMiddleware() {
   let cached: KVAdapter | null = null;
   return async (c: Context, next: Next) => {
-    const env = c.env as Record<string, unknown>;
+    const env: Record<string, unknown> = {
+      ...((c.env as Record<string, unknown> | undefined) ?? {}),
+    };
+    for (const key of STRAVA_ENV_KEYS) {
+      if (env[key] == null && process.env[key] != null) env[key] = process.env[key];
+    }
     if (!env.STRAVA_SESSIONS) {
       if (!cached) {
-        // Vercel Marketplace's Upstash integration provisions KV_REST_API_URL /
-        // KV_REST_API_TOKEN. Fall back to UPSTASH_REDIS_REST_* for repos that
-        // wire Upstash directly without going through Vercel.
-        const url = (env.KV_REST_API_URL
-          ?? env.UPSTASH_REDIS_REST_URL
-          ?? process.env.KV_REST_API_URL
-          ?? process.env.UPSTASH_REDIS_REST_URL) as string | undefined;
-        const token = (env.KV_REST_API_TOKEN
-          ?? env.UPSTASH_REDIS_REST_TOKEN
-          ?? process.env.KV_REST_API_TOKEN
-          ?? process.env.UPSTASH_REDIS_REST_TOKEN) as string | undefined;
+        const url = (env.KV_REST_API_URL ?? env.UPSTASH_REDIS_REST_URL) as string | undefined;
+        const token = (env.KV_REST_API_TOKEN ?? env.UPSTASH_REDIS_REST_TOKEN) as string | undefined;
         if (!url || !token) {
           return c.json(
             { error: 'Upstash Redis env not configured (KV_REST_API_URL / _TOKEN)' },
@@ -92,6 +107,7 @@ export function kvInjectionMiddleware() {
       }
       env.STRAVA_SESSIONS = cached;
     }
+    (c as unknown as { env: Record<string, unknown> }).env = env;
     await next();
   };
 }
