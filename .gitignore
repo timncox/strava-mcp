@@ -1,0 +1,13 @@
+.DS_Store
+.env
+.dev.vars
+.wrangler/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+*.log
+node_modules/
+scratch/
+agent/
+mcp/
