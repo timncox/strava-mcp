@@ -5,7 +5,6 @@
 	"description": "Fork of gabeperez/strava-mcp (SportMCP) ported from Cloudflare Workers + KV to Vercel + Upstash Redis.",
 	"scripts": {
 		"dev": "vercel dev",
-		"build": "vercel build",
 		"deploy": "vercel deploy --prod --yes",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest"
