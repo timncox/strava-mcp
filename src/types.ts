@@ -9,8 +9,12 @@ export interface Env {
   STRAVA_REDIRECT_URI: string;
   STRAVA_WEBHOOK_VERIFY_TOKEN?: string;
   POKE_API_KEY?: string;
-  UPSTASH_REDIS_REST_URL: string;
-  UPSTASH_REDIS_REST_TOKEN: string;
+  // Vercel Marketplace's Upstash integration provisions these.
+  KV_REST_API_URL?: string;
+  KV_REST_API_TOKEN?: string;
+  // Optional fallback when wiring Upstash directly (outside Vercel Marketplace).
+  UPSTASH_REDIS_REST_URL?: string;
+  UPSTASH_REDIS_REST_TOKEN?: string;
 }
 
 // Strava OAuth session stored in KV

@@ -71,15 +71,20 @@ export function kvInjectionMiddleware() {
     const env = c.env as Record<string, unknown>;
     if (!env.STRAVA_SESSIONS) {
       if (!cached) {
-        const url = (env.UPSTASH_REDIS_REST_URL ?? process.env.UPSTASH_REDIS_REST_URL) as
-          | string
-          | undefined;
-        const token = (env.UPSTASH_REDIS_REST_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN) as
-          | string
-          | undefined;
+        // Vercel Marketplace's Upstash integration provisions KV_REST_API_URL /
+        // KV_REST_API_TOKEN. Fall back to UPSTASH_REDIS_REST_* for repos that
+        // wire Upstash directly without going through Vercel.
+        const url = (env.KV_REST_API_URL
+          ?? env.UPSTASH_REDIS_REST_URL
+          ?? process.env.KV_REST_API_URL
+          ?? process.env.UPSTASH_REDIS_REST_URL) as string | undefined;
+        const token = (env.KV_REST_API_TOKEN
+          ?? env.UPSTASH_REDIS_REST_TOKEN
+          ?? process.env.KV_REST_API_TOKEN
+          ?? process.env.UPSTASH_REDIS_REST_TOKEN) as string | undefined;
         if (!url || !token) {
           return c.json(
-            { error: 'Upstash Redis env not configured (UPSTASH_REDIS_REST_URL / _TOKEN)' },
+            { error: 'Upstash Redis env not configured (KV_REST_API_URL / _TOKEN)' },
             500,
           );
         }
