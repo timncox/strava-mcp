@@ -464,7 +464,15 @@ app.get('/webhook', async (c) => {
 
 app.post('/webhook', async (c) => {
   const webhookHandler = new StravaWebhookHandler(c.env);
-  return webhookHandler.handleEvent(c, c.executionCtx);
+  // Vercel edge may not populate c.executionCtx the same way Cloudflare does.
+  // Fall back to a fire-and-forget shim so processEvent still runs.
+  const ctx = (c.executionCtx ?? {
+    waitUntil(p: Promise<unknown>) {
+      Promise.resolve(p).catch((err) => console.error('webhook background error:', err));
+    },
+    passThroughOnException() {},
+  }) as ExecutionContext;
+  return webhookHandler.handleEvent(c, ctx);
 });
 
 // Test endpoint for notifications (supports all providers)
